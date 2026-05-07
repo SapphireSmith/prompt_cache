@@ -1,0 +1,14 @@
+{
+  "name": "promptcache",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace @promptcache/server run dev",
+    "build:server": "npm --workspace @promptcache/server run build",
+    "start:server": "npm --workspace @promptcache/server run start"
+  }
+}
+
