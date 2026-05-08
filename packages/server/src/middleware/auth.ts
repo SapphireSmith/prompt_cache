@@ -1,6 +1,23 @@
 import { NextFunction, Request, Response } from "express";
 
-export function requireApiKey(_req: Request, _res: Response, next: NextFunction): void {
-  next();
-}
+import { ApiErrorResponse } from "../types";
 
+export function requireApiKey(expectedApiKey: string) {
+  return (req: Request, res: Response<ApiErrorResponse>, next: NextFunction): void => {
+    const providedApiKey = req.header("x-api-key")?.trim();
+
+    if (!providedApiKey || providedApiKey !== expectedApiKey) {
+      res.status(401).json({
+        success: false,
+        error: {
+          code: "UNAUTHORIZED",
+          message: "Invalid or missing API key."
+        }
+      });
+
+      return;
+    }
+
+    next();
+  };
+}
