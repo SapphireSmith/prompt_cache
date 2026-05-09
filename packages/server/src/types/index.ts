@@ -36,6 +36,17 @@ export interface CacheEntry {
   expiresAt: string;
 }
 
+export interface CacheRow {
+  id: number;
+  prompt_hash: string;
+  prompt_text: string;
+  response: string;
+  hits: number;
+  ttl_days: number;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface CacheGetQuery {
   prompt: string;
 }
