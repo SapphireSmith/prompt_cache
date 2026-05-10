@@ -224,7 +224,7 @@ function logRouteError(route: string, error: unknown): void {
 }
 
 function sendValidationError(
-  res: Response<CacheGetHitResponse | CacheGetMissResponse | CacheSetResponse | CacheDeleteResponse | ApiErrorResponse>,
+  res: Response<ApiErrorResponse>,
   error: ApiErrorResponse["error"]
 ): void {
   res.status(400).json({
@@ -234,7 +234,7 @@ function sendValidationError(
 }
 
 function handleInternalError(
-  res: Response<CacheGetHitResponse | CacheGetMissResponse | CacheSetResponse | CacheDeleteResponse | ApiErrorResponse>,
+  res: Response<ApiErrorResponse>,
   route: string,
   error: unknown
 ): void {

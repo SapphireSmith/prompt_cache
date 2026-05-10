@@ -3,7 +3,7 @@ import { EnvConfig } from "../types";
 export function loadEnv(): EnvConfig {
   const apiKey = requireEnv("API_KEY");
   const supabaseUrl = requireEnv("SUPABASE_URL");
-  const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
+  const supabaseAnonKey = requireEnv("SUPABASE_KEY");
   const port = parseNumberEnv("PORT", 3000);
   const defaultTtlDays = parseNumberEnv("DEFAULT_TTL_DAYS", 7);
 
