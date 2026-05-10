@@ -12,6 +12,7 @@ export function getDbClient(): SupabaseClient {
 
   const env = loadEnv();
 
+  // Supabase client initialization on Node 20 needs an explicit ws transport.
   supabaseClient = createClient(env.supabaseUrl, env.supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
