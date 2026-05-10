@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import ws from "ws";
 
 import { loadEnv } from "../utils/env";
 
@@ -11,7 +12,16 @@ export function getDbClient(): SupabaseClient {
 
   const env = loadEnv();
 
-  supabaseClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
+  supabaseClient = createClient(env.supabaseUrl, env.supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false
+    },
+    realtime: {
+      transport: ws as any
+    }
+  });
 
   return supabaseClient;
 }
