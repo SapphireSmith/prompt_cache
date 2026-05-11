@@ -31,16 +31,12 @@ cacheRouter.get(
     const validation = validateCacheGetQuery(req.query);
 
     if (!validation.success) {
-      res.status(400).json({
-        success: false,
-        error: validation.error
-      });
+      sendValidationError(res, validation.error);
       return;
     }
 
     try {
       const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
-      console.log(`[cache:get] normalized hash ${promptHash}`);
       const supabase = getDbClient();
       const { data, error } = await supabase
         .from(CACHE_TABLE)
@@ -55,7 +51,6 @@ cacheRouter.get(
       const entry = data?.[0] as Pick<CacheRow, "response" | "hits" | "created_at" | "expires_at"> | undefined;
 
       if (!entry || isExpired(entry.expires_at)) {
-        console.log(`[cache:get] miss for hash ${promptHash}`);
         res.status(200).json({
           success: true,
           hit: false,
@@ -74,7 +69,6 @@ cacheRouter.get(
         throw updateError;
       }
 
-      console.log(`[cache:get] hit for hash ${promptHash}, hits=${nextHits}`);
       res.status(200).json({
         success: true,
         hit: true,
@@ -86,8 +80,7 @@ cacheRouter.get(
         }
       });
     } catch (error) {
-      logRouteError("GET /cache", error);
-      res.status(500).json(internalError());
+      handleInternalError(res, "GET /cache", error);
     }
   }
 );
@@ -101,10 +94,7 @@ cacheRouter.post(
     const validation = validateCacheSetRequest(req.body);
 
     if (!validation.success) {
-      res.status(400).json({
-        success: false,
-        error: validation.error
-      });
+      sendValidationError(res, validation.error);
       return;
     }
 
@@ -114,7 +104,6 @@ cacheRouter.post(
       const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
       const ttlDays = validation.data.ttl_days ?? env.defaultTtlDays;
       const expiresAt = buildExpiryIso(ttlDays);
-      console.log(`[cache:post] upsert for hash ${promptHash} ttl_days=${ttlDays}`);
 
       const { data: existingRows, error: fetchError } = await supabase
         .from(CACHE_TABLE)
@@ -129,7 +118,6 @@ cacheRouter.post(
       const existingEntry = existingRows && existingRows.length > 0;
 
       if (existingEntry) {
-        console.log(`[cache:post] updating existing hash ${promptHash}`);
         const { error: updateError } = await supabase
           .from(CACHE_TABLE)
           .update({
@@ -144,7 +132,6 @@ cacheRouter.post(
           throw updateError;
         }
       } else {
-        console.log(`[cache:post] inserting new hash ${promptHash}`);
         const { error: insertError } = await supabase.from(CACHE_TABLE).insert({
           prompt_hash: promptHash,
           prompt_text: validation.data.prompt,
@@ -168,8 +155,7 @@ cacheRouter.post(
         }
       });
     } catch (error) {
-      logRouteError("POST /cache", error);
-      res.status(500).json(internalError());
+      handleInternalError(res, "POST /cache", error);
     }
   }
 );
@@ -183,16 +169,12 @@ cacheRouter.delete(
     const validation = validateCacheDeleteRequest(req.body);
 
     if (!validation.success) {
-      res.status(400).json({
-        success: false,
-        error: validation.error
-      });
+      sendValidationError(res, validation.error);
       return;
     }
 
     try {
       const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
-      console.log(`[cache:delete] deleting hash ${promptHash}`);
       const supabase = getDbClient();
       const { data, error } = await supabase
         .from(CACHE_TABLE)
@@ -212,8 +194,7 @@ cacheRouter.delete(
         }
       });
     } catch (error) {
-      logRouteError("DELETE /cache", error);
-      res.status(500).json(internalError());
+      handleInternalError(res, "DELETE /cache", error);
     }
   }
 );
@@ -239,6 +220,24 @@ function internalError(): ApiErrorResponse {
 }
 
 function logRouteError(route: string, error: unknown): void {
-  console.error(`[error] ${route}`);
-  console.error(error);
+  console.error(`[error] ${route}`, error);
+}
+
+function sendValidationError(
+  res: Response<ApiErrorResponse>,
+  error: ApiErrorResponse["error"]
+): void {
+  res.status(400).json({
+    success: false,
+    error
+  });
+}
+
+function handleInternalError(
+  res: Response<ApiErrorResponse>,
+  route: string,
+  error: unknown
+): void {
+  logRouteError(route, error);
+  res.status(500).json(internalError());
 }
