@@ -38,3 +38,36 @@ Normalize + Hash Prompt
 Cache Storage
     ↓
 Cached Response
+
+
+## Architecture Preview
+
+`promptcache` acts as a shared caching layer between your application and the LLM provider.
+
+Instead of generating the same response repeatedly, prompts are normalized, hashed, and checked against the cache before new inference is performed.
+
+```txt
+User Request
+     ↓
+Application / AI Agent
+     ↓
+promptcache API
+     ↓
+Normalize Prompt
+     ↓
+Generate SHA256 Hash
+     ↓
+Check Cache Store
+     ↓
+ ┌───────────────┐
+ │ Cache Hit     │ → Return Cached Response
+ └───────────────┘
+           │
+           ▼
+ ┌───────────────┐
+ │ Cache Miss    │ → Generate New LLM Response
+ └───────────────┘
+           ↓
+Store Response + Metadata
+           ↓
+Return Response
