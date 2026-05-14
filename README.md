@@ -1,11 +1,40 @@
 # promptcache
 
-`promptcache` is a shared prompt/response cache for LLM applications.
+Shared prompt-response caching infrastructure for LLM applications.
 
-This repository is organized as a monorepo and currently contains:
+`promptcache` helps AI applications reduce token costs, improve response times, and avoid repeated LLM inference by reusing previously generated responses through a centralized cache layer.
 
-- `packages/server`: the REST API server
-- `packages/sdk`: the npm SDK to be added in a later phase
+Built for developers building AI products, chat systems, agents, RAG pipelines, and multi-application LLM infrastructure.
 
-Planning documents live at the repository root until implementation expands.
+### Current Features
 
+- Prompt normalization
+- SHA256-based cache keys
+- TTL expiration support
+- Cache hit tracking
+- REST API
+- Typed TypeScript backend
+- Supabase integration
+- Monorepo architecture
+
+### Planned Features
+
+- SDK package
+- Semantic similarity caching
+- Redis backend
+- Embedding-based retrieval
+- Streaming support
+- Multi-provider support
+
+---
+
+```txt
+Application
+    ↓
+promptcache API
+    ↓
+Normalize + Hash Prompt
+    ↓
+Cache Storage
+    ↓
+Cached Response
