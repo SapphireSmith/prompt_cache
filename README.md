@@ -71,3 +71,35 @@ Check Cache Store
 Store Response + Metadata
            ↓
 Return Response
+
+## Why This Exists
+
+Modern AI applications repeatedly generate the same responses for identical or structurally similar prompts.
+
+This creates unnecessary:
+
+- Token usage
+- Inference costs
+- API latency
+- Compute overhead
+- Response delays
+
+As LLM-powered systems scale, repeated inference becomes increasingly expensive and inefficient.
+
+`promptcache` was built to reduce redundant LLM work by introducing a reusable caching layer between applications and model providers.
+
+Instead of generating responses repeatedly:
+
+1. Prompts are normalized
+2. A deterministic hash is generated
+3. Existing cached responses are reused when available
+
+This allows AI systems to:
+
+- Reduce operational costs
+- Improve response speed
+- Share cached responses across applications
+- Minimize duplicate inference
+- Build more scalable LLM infrastructure
+
+The long-term goal of `promptcache` is to evolve beyond deterministic caching into a semantic caching platform capable of retrieving responses based on meaning and similarity rather than exact prompt matches.
