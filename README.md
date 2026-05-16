@@ -103,3 +103,38 @@ This allows AI systems to:
 - Build more scalable LLM infrastructure
 
 The long-term goal of `promptcache` is to evolve beyond deterministic caching into a semantic caching platform capable of retrieving responses based on meaning and similarity rather than exact prompt matches.
+
+## Features
+
+### Current Features
+
+- Prompt normalization for consistent cache matching
+- SHA256-based deterministic cache keys
+- REST API for cache operations
+- Cache hit tracking
+- Configurable TTL expiration
+- Supabase-backed cache storage
+- Typed TypeScript backend
+- Monorepo architecture using npm workspaces
+- Environment variable validation
+- Structured API responses
+- Cache invalidation support
+
+---
+
+### Prompt Normalization
+
+Before generating cache keys, prompts are normalized to improve cache hit consistency.
+
+This helps eliminate formatting differences such as:
+
+- Extra whitespace
+- Capitalization differences
+- Minor formatting inconsistencies
+
+Example:
+
+```txt
+"What is AI?"
+" what is ai? "
+"WHAT IS AI?"
