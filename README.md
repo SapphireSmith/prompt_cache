@@ -138,3 +138,29 @@ Example:
 "What is AI?"
 " what is ai? "
 "WHAT IS AI?"
+
+## Project Structure
+
+`promptcache` is organized as a monorepo using npm workspaces.
+
+```txt
+promptcache/
+│
+├── packages/
+│   │
+│   ├── server/
+│   │   ├── src/
+│   │   │   ├── db/
+│   │   │   ├── routes/
+│   │   │   ├── utils/
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   └── sdk/
+│       └── (planned)
+│
+├── package.json
+├── package-lock.json
+└── README.md
