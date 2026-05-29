@@ -164,3 +164,67 @@ promptcache/
 ├── package.json
 ├── package-lock.json
 └── README.md
+
+## Tech Stack
+
+`promptcache` is built using a modern TypeScript backend stack focused on scalability, maintainability, and developer experience.
+
+| Technology | Purpose |
+|---|---|
+| TypeScript | Strongly typed backend development |
+| Node.js | Runtime environment |
+| Express | REST API framework |
+| Supabase | Cache storage and database layer |
+| WebSocket (`ws`) | Real-time communication support |
+| npm Workspaces | Monorepo package management |
+| dotenv | Environment variable management |
+
+---
+
+### Why This Stack?
+
+The current stack was selected to keep the system:
+
+- Lightweight
+- Fast to iterate on
+- Easy to extend
+- Production-friendly
+- Modular for future infrastructure upgrades
+
+The architecture is intentionally designed to support future additions such as:
+
+- Redis or Valkey adapters
+- Vector databases
+- Embedding pipelines
+- Semantic retrieval systems
+- Distributed cache layers
+- Multi-provider LLM infrastructure
+
+---
+
+### Backend Design Principles
+
+The current backend focuses on:
+
+- Deterministic cache behavior
+- Clear API boundaries
+- Modular architecture
+- Typed request handling
+- Reusable utility layers
+- Scalable infrastructure evolution
+
+---
+
+### Current Storage Layer
+
+The current implementation uses Supabase as the primary cache storage layer.
+
+Responsibilities include:
+
+- Storing normalized prompt hashes
+- Managing cache expiration
+- Persisting responses
+- Tracking cache hits
+- Supporting cache invalidation
+
+The storage layer is abstracted to allow future migration toward high-performance caching systems such as Redis.
