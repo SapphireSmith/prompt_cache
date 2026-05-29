@@ -11,7 +11,6 @@ import {
   CacheSetRequest,
   CacheSetResponse
 } from "../types";
-import { loadEnv } from "../utils/env";
 import { normalizeAndHashPrompt } from "../utils/hash";
 import {
   validateCacheDeleteRequest,
@@ -19,185 +18,203 @@ import {
   validateCacheSetRequest
 } from "../utils/validation";
 
-export const cacheRouter = Router();
 const CACHE_TABLE = "cache";
 
-cacheRouter.get(
-  "/",
-  async (
-    req: Request<unknown, unknown, unknown, { prompt?: string }>,
-    res: Response<CacheGetHitResponse | CacheGetMissResponse | ApiErrorResponse>
-  ) => {
-    const validation = validateCacheGetQuery(req.query);
+export interface CacheDbClient {
+  from(table: string): any;
+}
 
-    if (!validation.success) {
-      sendValidationError(res, validation.error);
-      return;
-    }
+interface CacheRouterDependencies {
+  defaultTtlDays: number;
+  getDbClient: () => CacheDbClient;
+}
 
-    try {
-      const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
-      const supabase = getDbClient();
-      const { data, error } = await supabase
-        .from(CACHE_TABLE)
-        .select("response, hits, created_at, expires_at")
-        .eq("prompt_hash", promptHash)
-        .limit(1);
+export const cacheRouter = createCacheRouter({
+  defaultTtlDays: 7,
+  getDbClient
+});
 
-      if (error) {
-        throw error;
-      }
+export function createCacheRouter(dependencies: CacheRouterDependencies): Router {
+  const router = Router();
 
-      const entry = data?.[0] as Pick<CacheRow, "response" | "hits" | "created_at" | "expires_at"> | undefined;
+  router.get(
+    "/",
+    async (
+      req: Request<unknown, unknown, unknown, { prompt?: string }>,
+      res: Response<CacheGetHitResponse | CacheGetMissResponse | ApiErrorResponse>
+    ) => {
+      const validation = validateCacheGetQuery(req.query);
 
-      if (!entry || isExpired(entry.expires_at)) {
-        res.status(200).json({
-          success: true,
-          hit: false,
-          response: null
-        });
+      if (!validation.success) {
+        sendValidationError(res, validation.error);
         return;
       }
 
-      const nextHits = entry.hits + 1;
-      const { error: updateError } = await supabase
-        .from(CACHE_TABLE)
-        .update({ hits: nextHits })
-        .eq("prompt_hash", promptHash);
+      try {
+        const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
+        const supabase = dependencies.getDbClient();
+        const { data, error } = await supabase
+          .from(CACHE_TABLE)
+          .select("response, hits, created_at, expires_at")
+          .eq("prompt_hash", promptHash)
+          .limit(1);
 
-      if (updateError) {
-        throw updateError;
-      }
-
-      res.status(200).json({
-        success: true,
-        hit: true,
-        response: entry.response,
-        meta: {
-          hits: nextHits,
-          created_at: entry.created_at,
-          expires_at: entry.expires_at
+        if (error) {
+          throw error;
         }
-      });
-    } catch (error) {
-      handleInternalError(res, "GET /cache", error);
-    }
-  }
-);
 
-cacheRouter.post(
-  "/",
-  async (
-    req: Request<unknown, unknown, Partial<CacheSetRequest>>,
-    res: Response<CacheSetResponse | ApiErrorResponse>
-  ) => {
-    const validation = validateCacheSetRequest(req.body);
+        const entry = data?.[0] as Pick<CacheRow, "response" | "hits" | "created_at" | "expires_at"> | undefined;
 
-    if (!validation.success) {
-      sendValidationError(res, validation.error);
-      return;
-    }
+        if (!entry || isExpired(entry.expires_at)) {
+          res.status(200).json({
+            success: true,
+            hit: false,
+            response: null
+          });
+          return;
+        }
 
-    try {
-      const env = loadEnv();
-      const supabase = getDbClient();
-      const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
-      const ttlDays = validation.data.ttl_days ?? env.defaultTtlDays;
-      const expiresAt = buildExpiryIso(ttlDays);
-
-      const { data: existingRows, error: fetchError } = await supabase
-        .from(CACHE_TABLE)
-        .select("id")
-        .eq("prompt_hash", promptHash)
-        .limit(1);
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      const existingEntry = existingRows && existingRows.length > 0;
-
-      if (existingEntry) {
+        const nextHits = entry.hits + 1;
         const { error: updateError } = await supabase
           .from(CACHE_TABLE)
-          .update({
-            prompt_text: validation.data.prompt,
-            response: validation.data.response,
-            ttl_days: ttlDays,
-            expires_at: expiresAt
-          })
+          .update({ hits: nextHits })
           .eq("prompt_hash", promptHash);
 
         if (updateError) {
           throw updateError;
         }
-      } else {
-        const { error: insertError } = await supabase.from(CACHE_TABLE).insert({
-          prompt_hash: promptHash,
-          prompt_text: validation.data.prompt,
-          response: validation.data.response,
-          ttl_days: ttlDays,
-          expires_at: expiresAt
+
+        res.status(200).json({
+          success: true,
+          hit: true,
+          response: entry.response,
+          meta: {
+            hits: nextHits,
+            created_at: entry.created_at,
+            expires_at: entry.expires_at
+          }
         });
+      } catch (error) {
+        handleInternalError(res, "GET /cache", error);
+      }
+    }
+  );
 
-        if (insertError) {
-          throw insertError;
-        }
+  router.post(
+    "/",
+    async (
+      req: Request<unknown, unknown, Partial<CacheSetRequest>>,
+      res: Response<CacheSetResponse | ApiErrorResponse>
+    ) => {
+      const validation = validateCacheSetRequest(req.body);
+
+      if (!validation.success) {
+        sendValidationError(res, validation.error);
+        return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: {
-          prompt_hash: promptHash,
-          expires_at: expiresAt,
-          ttl_days: ttlDays,
-          updated: existingEntry
+      try {
+        const supabase = dependencies.getDbClient();
+        const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
+        const ttlDays = validation.data.ttl_days ?? dependencies.defaultTtlDays;
+        const expiresAt = buildExpiryIso(ttlDays);
+
+        const { data: existingRows, error: fetchError } = await supabase
+          .from(CACHE_TABLE)
+          .select("id")
+          .eq("prompt_hash", promptHash)
+          .limit(1);
+
+        if (fetchError) {
+          throw fetchError;
         }
-      });
-    } catch (error) {
-      handleInternalError(res, "POST /cache", error);
+
+        const existingEntry = existingRows && existingRows.length > 0;
+
+        if (existingEntry) {
+          const { error: updateError } = await supabase
+            .from(CACHE_TABLE)
+            .update({
+              prompt_text: validation.data.prompt,
+              response: validation.data.response,
+              ttl_days: ttlDays,
+              expires_at: expiresAt
+            })
+            .eq("prompt_hash", promptHash);
+
+          if (updateError) {
+            throw updateError;
+          }
+        } else {
+          const { error: insertError } = await supabase.from(CACHE_TABLE).insert({
+            prompt_hash: promptHash,
+            prompt_text: validation.data.prompt,
+            response: validation.data.response,
+            ttl_days: ttlDays,
+            expires_at: expiresAt
+          });
+
+          if (insertError) {
+            throw insertError;
+          }
+        }
+
+        res.status(200).json({
+          success: true,
+          data: {
+            prompt_hash: promptHash,
+            expires_at: expiresAt,
+            ttl_days: ttlDays,
+            updated: existingEntry
+          }
+        });
+      } catch (error) {
+        handleInternalError(res, "POST /cache", error);
+      }
     }
-  }
-);
+  );
 
-cacheRouter.delete(
-  "/",
-  async (
-    req: Request<unknown, unknown, Partial<CacheDeleteRequest>>,
-    res: Response<CacheDeleteResponse | ApiErrorResponse>
-  ) => {
-    const validation = validateCacheDeleteRequest(req.body);
+  router.delete(
+    "/",
+    async (
+      req: Request<unknown, unknown, Partial<CacheDeleteRequest>>,
+      res: Response<CacheDeleteResponse | ApiErrorResponse>
+    ) => {
+      const validation = validateCacheDeleteRequest(req.body);
 
-    if (!validation.success) {
-      sendValidationError(res, validation.error);
-      return;
-    }
-
-    try {
-      const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
-      const supabase = getDbClient();
-      const { data, error } = await supabase
-        .from(CACHE_TABLE)
-        .delete()
-        .eq("prompt_hash", promptHash)
-        .select("prompt_hash");
-
-      if (error) {
-        throw error;
+      if (!validation.success) {
+        sendValidationError(res, validation.error);
+        return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: {
-          deleted: Boolean(data && data.length > 0),
-          prompt_hash: promptHash
+      try {
+        const { promptHash } = normalizeAndHashPrompt(validation.data.prompt);
+        const supabase = dependencies.getDbClient();
+        const { data, error } = await supabase
+          .from(CACHE_TABLE)
+          .delete()
+          .eq("prompt_hash", promptHash)
+          .select("prompt_hash");
+
+        if (error) {
+          throw error;
         }
-      });
-    } catch (error) {
-      handleInternalError(res, "DELETE /cache", error);
+
+        res.status(200).json({
+          success: true,
+          data: {
+            deleted: Boolean(data && data.length > 0),
+            prompt_hash: promptHash
+          }
+        });
+      } catch (error) {
+        handleInternalError(res, "DELETE /cache", error);
+      }
     }
-  }
-);
+  );
+
+  return router;
+}
 
 function buildExpiryIso(ttlDays: number): string {
   const millisecondsPerDay = 24 * 60 * 60 * 1000;
