@@ -9,6 +9,8 @@
     "dev:server": "npm --workspace @promptcache/server run dev",
     "build:server": "npm --workspace @promptcache/server run build",
     "start:server": "npm --workspace @promptcache/server run start",
-    "build:sdk": "npm --workspace promptcache-sdk run build"
+    "build:sdk": "npm --workspace promptcache-sdk run build",
+    "test:server": "npm --workspace @promptcache/server run test",
+    "test": "npm run test:server"
   }
 }
